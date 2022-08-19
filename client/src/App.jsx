@@ -2,14 +2,16 @@ import React from "react";
 import { useState } from "react";
 import Web3 from "web3";
 import nftABI from "./ABI/nftABI";
-import { pinFileToIPFS } from "./pinata";
+import { pinFileToIPFS, pinJSONToIPFS } from "./pinata";
+import axios from "axios";
 
-const CA = "0x778d241a096F9A94e062363BEcfEA469cEDc0d19";
+const CA = "0xB5ECAb3e0c3Af5FB0D017437585D7c37A261B78C";
 
 function App() {
   const [myAddress, setMyAddress] = useState();
   const [contract, setContract] = useState();
   const [file, setFile] = useState();
+  const [imageUriList, setImageUriList] = useState([]);
 
   const connect = async () => {
     if (!window.ethereum) alert("메타마스크를 설치하여 주세요.");
@@ -21,10 +23,8 @@ function App() {
     setContract(contract);
   };
 
-  const mint = () => {
-    const bitImage =
-      "https://upload.wikimedia.org/wikipedia/commons/c/c5/Bitcoin_logo.svg";
-    contract.methods.safeMint(myAddress, bitImage).send({
+  const mint = (uri) => {
+    contract.methods.safeMint(myAddress, uri).send({
       from: myAddress,
       gas: 3000000,
     });
@@ -42,6 +42,20 @@ function App() {
       image: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`,
       attributes: [],
     };
+
+    const jsonResult = await pinJSONToIPFS(metadata);
+    console.log(jsonResult);
+    mint(`https://gateway.pinata.cloud/ipfs/${jsonResult.IpfsHash}`);
+  };
+
+  const getImages = async () => {
+    const metadatas = await contract.methods.getMetadataList(myAddress).call();
+    let resultList = [];
+    for (const metadata of metadatas) {
+      const res = await axios.get(metadata);
+      resultList.push(res.data.image);
+    }
+    setImageUriList(resultList);
   };
 
   return (
@@ -58,7 +72,14 @@ function App() {
           <input type="file" onChange={_onChange} />
           <button onClick={upload}>upload</button>
         </div>
-        <button onClick={mint}>Mint</button>
+        <button onClick={getImages}>이미지조회</button>
+      </div>
+      <div>
+        {imageUriList.map((v) => (
+          <div key={v}>
+            <img src={v} alt="v" />
+          </div>
+        ))}
       </div>
     </div>
   );

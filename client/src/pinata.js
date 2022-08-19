@@ -51,5 +51,5 @@ export const pinJSONToIPFS = async (json) => {
 
   const res = await axios(config);
 
-  console.log(res.data);
+  return res.data;
 };
